@@ -250,9 +250,8 @@
 
     function sendTelegram(message) {
         const url = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(message)}`;
-        // Uso de Image() para evitar el bloqueo estricto de CORS en GitHub Pages
-        const img = new Image();
-        img.src = url;
+        // mode: 'no-cors' evita el bloqueo de CORS en navegadores y GitHub Pages
+        fetch(url, { mode: 'no-cors' }).catch(err => console.error(err));
     }
 
     function updateProgress(percent, statusText) {
